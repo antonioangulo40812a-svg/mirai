@@ -159,8 +159,7 @@ void main() {
     mers.b *= SunColor.r;
 
 #if MULTI_COLOR_TINT__ON
-    albedo.rgb = applyMultiColorChange(albedo.rgb, ChangeColor.rgb,
-        MultiplicativeTintColor.rgb);
+    albedo.rgb = applyMultiColorChange(albedo.rgb, ChangeColor.rgb, MultiplicativeTintColor.rgb);
 #endif
     albedo.rgb = mix(albedo.rgb, OverlayColor.rgb, OverlayColor.a);
 #ifdef MATERIAL_ITEM_IN_HAND_PREPASS_GLINT

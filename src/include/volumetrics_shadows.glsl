@@ -94,8 +94,6 @@ float calcTShadow(vec3 worldPos) {
 
 void main() {
     uvec3 xyz = gl_GlobalInvocationID;
-    if (any(greaterThanEqual(xyz, uvec3(VolumeDimensions.xyz)))) return;
-
     vec3 uvw = (vec3(xyz) + JitterOffset.xyz + 0.5) / VolumeDimensions.xyz;
     vec3 worldPos = volumeToWorld(VolumeNearFar.xy, uvw, u_invViewProj, u_proj);
 

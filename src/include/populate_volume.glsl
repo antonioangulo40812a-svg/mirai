@@ -29,10 +29,9 @@ IMAGE2D_ARRAY_WO(s_ScatteringBufferOut, rgba16f);
 #include "lib/atmosphere.glsl"
 
 void main() {
-    uvec3 xyz = gl_GlobalInvocationID;
-    if (any(greaterThanEqual(xyz, uvec3(VolumeDimensions.xyz)))
-        || !isOverworld(FogSkyBlend.g)) return;
+    if (!isOverworld(FogSkyBlend.g)) return;
 
+    uvec3 xyz = gl_GlobalInvocationID;
     vec3 uvw = (vec3(xyz) + 0.5) / VolumeDimensions.xyz;
     vec3 worldPos = volumeToWorld(VolumeNearFar.xy, uvw, u_invViewProj, u_proj);
     vec3 worldDir = normalize(worldPos);
