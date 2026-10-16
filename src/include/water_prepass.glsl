@@ -120,7 +120,13 @@ void main() {
     mat3 tbn = mat3(normalize(v_tangent), normalize(v_bitangent), normal);
 
     vec2 waterPos = v_worldPos.xz - WorldOrigin.xz;
-    float d = clamp(exp(-length(v_worldPos.xz) * 0.05), 0.0, 1.0) * 0.05;
+    vec3 worldDir = tbn * normalize(v_worldPos);
+
+    vec2 warpDir = worldDir.xy / worldDir.z;
+    for(int i = 0; i < 4; i++)
+        waterPos += warpDir * waves2(waterPos, Time.x) * 0.1;
+
+    float d = clamp(exp(-length(v_worldPos) * 0.01), 0.0, 1.0) * 0.025;
     vec3 waterNormal = calcWaterNormal(waterPos, Time.x, d);
     waterNormal = tbn * waterNormal;
 
