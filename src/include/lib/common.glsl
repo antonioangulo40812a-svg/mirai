@@ -80,6 +80,7 @@ float phase(float u, float g, float a) {
 }
 
 vec3 fromLinear(vec3 color) {
+    color = max(color, vec3(0.0));
     return mix(
         12.92 * color,
         pow(color, vec3(1.0 / 2.4)) * 1.055 - 0.055,
@@ -87,7 +88,8 @@ vec3 fromLinear(vec3 color) {
     );
 }
 
-vec3 toLinear(vec3 color){
+vec3 toLinear(vec3 color) {
+    color = max(color, vec3(0.0));
     return mix(
         color * 0.07739938080495356,
         pow((color + 0.055) * 0.9478672985781990521327, vec3(2.4)),
