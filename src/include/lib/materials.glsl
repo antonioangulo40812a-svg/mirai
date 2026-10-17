@@ -77,7 +77,7 @@ vec3 calcNormalFromHeightmap(sampler2D heightmapTex, vec2 heightmapUV) {
 }
 
 vec3 calcNormalFromEncTexture(sampler2D matTexture, vec4 texel, vec2 normalUV) {
-    const float kHeightMapPixelEdgeWidth = 0.083333335816860198974609375;
+    const float kHeightMapPixelEdgeWidth = 0.08333333333333333;
     const float kRecipHeightMapDepth     = 0.25;
     const float kHeightMapFlattenEpsilon = 0.005;
 
@@ -234,10 +234,7 @@ void texturePBRMaterials(
         tNormal = calcNormalFromHeightmap(s_NormalTexture, uv);
     } else if ((pbrTextureFlags & kPBRHasEncNormalTexture) == kPBRHasEncNormalTexture) {
         vec4 normalTex = textureLod(s_NormalTexture, uv, 0.0);
-        if (normalTex.r == normalTex.g && normalTex.g == normalTex.b)
-            tNormal = calcNormalFromHeightmap(s_NormalTexture, uv);
-        else
-            tNormal = calcNormalFromEncTexture(s_NormalTexture, normalTex, uv);
+        tNormal = calcNormalFromEncTexture(s_NormalTexture, normalTex, uv);
     }
 
     mat3 tbn = mat3(normalize(tangent), normalize(bitangent), normal);
