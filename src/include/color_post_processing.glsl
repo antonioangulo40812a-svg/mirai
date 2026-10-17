@@ -29,31 +29,19 @@ SAMPLER2D(s_RasterizedColor);
 #include "lib/common.glsl"
 
 // AgX tonemapping
-// https://github.com/google/filament/blob/main/filament/src/ToneMapper.cpp
 // https://github.com/bWFuanVzYWth/AgX
-
-const mat3 REC709_TO_REC2020 = mat3(
-    0.6274040, 0.0690970, 0.0163916,
-    0.3292820, 0.9195400, 0.0880132,
-    0.0433136, 0.0113612, 0.8955950
-);
-
-const mat3 REC2020_TO_REC709 = mat3(
-     1.6604910, -0.1245505, -0.0181508,
-    -0.5876411, 1.1328999, -0.1005789,
-    -0.0728499, -0.0083494, 1.1187297
-);
+// https://iolite-engine.com/blog_posts/minimal_agx_implementation
 
 const mat3 AGX_INSET = mat3(
-    0.856627153315983, 0.137318972929847, 0.11189821299995,
-    0.0951212405381588, 0.761241990602591, 0.0767994186031903,
-    0.0482516061458583, 0.101439036467562, 0.811302368396859
+    0.842479062253094, 0.0423282422610123, 0.0423756549057051,
+    0.0784335999999992, 0.878468636469772, 0.0784336,
+    0.0792237451477643, 0.0791661274605434, 0.879142973793104
 );
 
 const mat3 AGX_OUTSET = mat3(
-    1.1271005818144368, -0.1413297634984383, -0.14132976349843826,
-    -0.11060664309660323, 1.157823702216272, -0.11060664309660294,
-    -0.016493938717834573, -0.016493938717834257, 1.2519364065950405
+    1.19687900512017, -0.0528968517574562, -0.0529716355144438,
+    -0.0980208811401368, 1.15190312990417, -0.0980434501171241,
+    -0.0990297440797205, -0.0989611768448433, 1.15107367264116
 );
 
 const float AGX_MIN_EV = -12.473931188332413;
@@ -77,19 +65,13 @@ vec3 agxCurve3(vec3 v) {
 }
 
 vec3 agx(vec3 val) {
-    val = REC709_TO_REC2020 * val;
     val = AGX_INSET * val;
-
     val = max(val, vec3(1e-6));
     val = clamp(log2(val) * (1.0 / AGX_DYNAMIC_RANGE) - (AGX_MIN_EV / AGX_DYNAMIC_RANGE), 0.0, 1.0);
     val = agxCurve3(val);
-
     val = AGX_OUTSET * val;
-
     val = max(val, vec3(0.0));
-    val = pow(val, vec3(2.2));
-
-    val = REC2020_TO_REC709 * val;
+    val = pow(val, vec3(2.2)); // useless conversion, but it gives a bit contrast
     return val;
 }
 
