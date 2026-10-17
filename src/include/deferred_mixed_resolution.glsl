@@ -71,6 +71,7 @@ uniform vec4 WorldOrigin;
 uniform vec4 FogAndDistanceControl;
 uniform vec4 SunColor;
 uniform mat4 u_invViewProj;
+uniform mat4 u_view;
 
 SAMPLER2D(s_ColorMetalnessSubsurface);
 SAMPLER2D(s_Normal);
@@ -129,6 +130,12 @@ void main() {
         DirectionalLightSourceWorldSpaceDirection.xyz, -worldDir, f0, roughness);
 
     albedo = (1.0 - metalness) * albedo;
+
+    subsurface *= linearstep(
+        ShadowFilterOffsetAndRangeFarAndMapSizeAndNormalOffsetStrength.y - 8.0,
+        ShadowFilterOffsetAndRangeFarAndMapSizeAndNormalOffsetStrength.y - 16.0,
+        length(worldPos)
+    );
 
     float fdiffuse = diffuseLambert(normal, DirectionalLightSourceWorldSpaceDirection.xyz);
     float wdiffuse = diffuseWrap(normal, DirectionalLightSourceWorldSpaceDirection.xyz, 0.5);
