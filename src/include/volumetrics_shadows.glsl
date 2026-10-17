@@ -57,28 +57,7 @@ float calcFPShadow(vec3 worldPos) {
     return step(occluder, textureLod(s_ShadowCascades, vec3(uvShadow, cascade), 0.0).r);
 }
 
-int getCascade(vec3 worldPos, out vec3 projPos) {
-    int numShadow = 0;
-    int numCascade = int(dot(clamp(CascadesPerSet, 0.0, 1.0), vec4(1.0)));
-
-    for (int i = 0; i < numCascade; i++) {
-        int cascadePerSet = min(int(CascadesPerSet[i]), 8 - numShadow);
-        for (int j = 0; j < cascadePerSet; j++) {
-            int cascadeIdx = numShadow + j;
-            projPos = (CascadesShadowProj[cascadeIdx] * vec4(worldPos, 1.0)).xyz;
-            if (all(lessThanEqual(abs(projPos), vec3(1.0)))) return cascadeIdx;
-        }
-        numShadow += cascadePerSet;
-    }
-
-    return -1;
-}
-
-float calcTShadow(vec3 worldPos) {
-    vec3 projPos;
-    int cascade = getCascade(worldPos, projPos);
-    if (cascade < 0) return 1.0;
-
+float calcCascadeShadow(int cascadeIdx, vec3 projPos) {
 #if TRANSPILE_TARGET__GLSL
     vec2 uvShadow = projPos.xy * 0.5 + 0.5;
     float occluder = projPos.z * 0.5 + 0.5;
@@ -87,9 +66,29 @@ float calcTShadow(vec3 worldPos) {
     float occluder = projPos.z;
 #endif
 
-    float shadowScale = CascadesParameters[cascade].x;
+    float shadowScale = CascadesParameters[cascadeIdx].x;
     uvShadow = uvShadow * shadowScale + vec2(0.0, 1.0 - shadowScale);
-    return step(occluder, textureLod(s_ShadowCascades, vec3(uvShadow, cascade), 0.0).r);
+    return step(occluder, textureLod(s_ShadowCascades, vec3(uvShadow, cascadeIdx), 0.0).r);
+}
+
+float calcTShadow(vec3 worldPos) {
+    float result = 1.0;
+    int setBase = 0;
+    int numSets = int(dot(clamp(CascadesPerSet, 0.0, 1.0), vec4(1.0)));
+
+    for (int s = 0; s < numSets; s++) {
+        int setEnd = min(setBase + int(CascadesPerSet[s]), 8);
+
+        for (int c = setBase; c < setEnd; c++) {
+            vec3 projPos = (CascadesShadowProj[c] * vec4(worldPos, 1.0)).xyz;
+            if (all(lessThanEqual(abs(projPos), vec3(1.0)))) {
+                result = min(result, calcCascadeShadow(c, projPos));
+                break;
+            }
+        }
+        setBase = setEnd;
+    }
+    return result;
 }
 
 void main() {

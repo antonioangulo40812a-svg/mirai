@@ -10,6 +10,7 @@ uniform vec4 DirectionalLightSourceShadowDirection;
 uniform vec4 FirstPersonPlayerShadowsEnabledAndResolutionAndFilterWidthAndTextureDimensions;
 uniform vec4 NdLFloor;
 uniform vec4 ShadowFilterOffsetAndRangeFarAndMapSizeAndNormalOffsetStrength;
+uniform vec4 SubsurfaceScatteringContributionAndDiffuseWrapValueAndFalloffScale;
 
 SAMPLER2DARRAY(s_ShadowCascades);
 
@@ -77,36 +78,14 @@ float calcFPShadow(vec3 worldPos, float nDotSd) {
     return result * 0.25;
 }
 
-int calcCascade(vec3 worldPos, out vec3 projPos, out mat4 invProj) {
-    int numShadow  = 0;
-    int numCascade = int(dot(clamp(CascadesPerSet, 0.0, 1.0), vec4(1.0)));
+vec2 calcCascadeShadow(int cascadeIdx, vec3 worldPos, float nDotSd) {
+    vec3 projPos = (CascadesShadowProj[cascadeIdx] * vec4(worldPos, 1.0)).xyz;
 
-    for (int i = 0; i < numCascade; i++) {
-        int cascadePerSet = min(int(CascadesPerSet[i]), 8 - numShadow);
-        for (int j = 0; j < cascadePerSet; j++) {
-            int cascadeIdx = numShadow + j;
-            projPos = (CascadesShadowProj[cascadeIdx] * vec4(worldPos, 1.0)).xyz;
-            invProj = CascadesShadowInvProj[cascadeIdx];
+    float falloff = length(CascadesShadowInvProj[cascadeIdx][2].xyz) * 5.0;
 
-            if (all(lessThanEqual(abs(projPos), vec3(1.0)))) return cascadeIdx;
-        }
-        numShadow += cascadePerSet;
-    }
-
-    return -1;
-}
-
-vec2 calcTShadow(vec3 worldPos, float nDotSd) {
-    vec3 projPos;
-    mat4 invProj;
-    int cascade = calcCascade(worldPos, projPos, invProj);
-    if (cascade < 0) return vec2(1.0);
-
-    float falloff = length(invProj[2].xyz) * 5.0;
-
-    float slopeMask = clamp(nDotSd, NdLFloor[cascade], 1.0);
-    float zbias = CascadesParameters[cascade].g
-        + CascadesParameters[cascade].b * (sqrt(1.0 - (slopeMask * slopeMask)) / slopeMask);
+    float slopeMask = clamp(nDotSd, NdLFloor[cascadeIdx], 1.0);
+    float zbias = CascadesParameters[cascadeIdx].g
+        + CascadesParameters[cascadeIdx].b * (sqrt(1.0 - (slopeMask * slopeMask)) / slopeMask);
     projPos.z -= zbias;
 
 #if TRANSPILE_TARGET__GLSL
@@ -117,7 +96,7 @@ vec2 calcTShadow(vec3 worldPos, float nDotSd) {
     float occluder = projPos.z;
 #endif
 
-    float shadowScale = CascadesParameters[cascade].r;
+    float shadowScale = CascadesParameters[cascadeIdx].r;
     uvShadow = uvShadow * shadowScale + vec2(0.0, 1.0 - shadowScale);
 
     vec2 result = vec2(0.0);
@@ -126,7 +105,7 @@ vec2 calcTShadow(vec3 worldPos, float nDotSd) {
 
     for (int i = 0; i < 4; i++) {
         vec2 uvOffset = uvShadow + PCF_OFFSETS[i] * offsetScale;
-        vec4 shadowSamples = textureGather(s_ShadowCascades, vec3(uvOffset, cascade), 0);
+        vec4 shadowSamples = textureGather(s_ShadowCascades, vec3(uvOffset, cascadeIdx), 0);
         vec2 weights = fract(
             uvOffset * ShadowFilterOffsetAndRangeFarAndMapSizeAndNormalOffsetStrength.b + 0.5
         );
@@ -135,6 +114,27 @@ vec2 calcTShadow(vec3 worldPos, float nDotSd) {
     }
 
     return result * 0.25;
+}
+
+vec2 calcTShadow(vec3 worldPos, float nDotSd) {
+    vec2 result = vec2(1.0);
+    int setBase = 0;
+    int numSets = int(dot(clamp(CascadesPerSet, 0.0, 1.0), vec4(1.0)));
+
+    for (int s = 0; s < numSets; s++) {
+        int setEnd = min(setBase + int(CascadesPerSet[s]), 8);
+
+        for (int c = setBase; c < setEnd; c++) {
+            vec3 projPos = (CascadesShadowProj[c] * vec4(worldPos, 1.0)).xyz;
+            if (all(lessThanEqual(abs(projPos), vec3(1.0)))) {
+                vec2 shadow = calcCascadeShadow(c, worldPos, nDotSd);
+                result = min(result, shadow);
+                break;
+            }
+        }
+        setBase = setEnd;
+    }
+    return result;
 }
 
 vec2 calcShadowMap(vec3 worldPos, vec3 normal) {
