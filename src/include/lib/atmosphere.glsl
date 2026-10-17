@@ -85,7 +85,7 @@ AtmosphericScattering calcAtmosphereScattering(AtmosphereParams params, vec2 t1,
         atm.lightDir,
         params.cRayleigh,
         params.cMie,
-        params.cOzone,
+        params.cOzone * M_OZONE,
         hbias
     );
     atm.R = (1.0 - exp(-atm.opticalDepth
@@ -162,7 +162,7 @@ vec3 calcAtmosphere(AtmosphereParams params) {
 void atmConstant(float rain, out vec3 cRayleigh, out vec3 cMie, out vec3 cOzone) {
     cRayleigh = mix(vec3(13.558e-6), vec3(5.802e-6, 13.558e-6, 33.100e-6), rain);
     cMie = mix(vec3(3.996e-6) * 10.0, vec3(3.996e-6), rain);
-    cOzone = vec3(0.650e-6, 1.881e-6, 0.085e-6) * M_OZONE * rain;
+    cOzone = vec3(0.650e-6, 1.881e-6, 0.085e-6) * rain;
 }
 
 vec3 calcAtmSky(vec3 worldDir, vec3 sunDir, vec3 moonDir, float rain) {
