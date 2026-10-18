@@ -71,7 +71,6 @@ vec3 agx(vec3 val) {
     val = agxCurve3(val);
     val = AGX_OUTSET * val;
     val = max(val, vec3(0.0));
-    val = pow(val, vec3(2.2)); // useless conversion, but it gives a bit contrast
     return val;
 }
 
@@ -92,7 +91,6 @@ void main() {
     inputColor = mix(inputColor, overlayCol.rgb, overlayCol.a);
 
     vec3 outColor = agx(inputColor);
-    outColor = fromLinear(outColor);
     fragColor = vec4(outColor, 1.0);
 }
 #endif //SHADER_STAGE__FRAGMENT
