@@ -228,17 +228,23 @@ void texturePBRMaterials(
 
     vec3 tNormal = vec3(0.0, 0.0, 1.0);
 
-    if ((pbrTextureFlags & kPBRHasNormalTexture) == kPBRHasNormalTexture) {
+    bool hasNormalTex = (pbrTextureFlags & kPBRHasNormalTexture) == kPBRHasNormalTexture;
+    bool hasHeightmapTex = (pbrTextureFlags & kPBRHasHeightMapTexture) == kPBRHasHeightMapTexture;
+    bool hasEncNormalTex = (pbrTextureFlags & kPBRHasEncNormalTexture) == kPBRHasEncNormalTexture;
+
+    if (hasNormalTex) {
         tNormal = texture(s_NormalTexture, uv).rgb * 2.0 - 1.0;
-    } else if ((pbrTextureFlags & kPBRHasHeightMapTexture) == kPBRHasHeightMapTexture) {
+    } else if (hasHeightmapTex) {
         tNormal = calcNormalFromHeightmap(s_NormalTexture, uv);
-    } else if ((pbrTextureFlags & kPBRHasEncNormalTexture) == kPBRHasEncNormalTexture) {
+    } else if (hasEncNormalTex) {
         vec4 normalTex = textureLod(s_NormalTexture, uv, 0.0);
         tNormal = calcNormalFromEncTexture(s_NormalTexture, normalTex, uv);
     }
 
-    mat3 tbn = mat3(normalize(tangent), normalize(bitangent), normal);
-    normal = tbn * tNormal;
+    if (hasNormalTex || hasHeightmapTex || hasEncNormalTex) {
+        mat3 tbn = mat3(normalize(tangent), normalize(bitangent), normal);
+        normal = tbn * tNormal;
+    }
 }
 
 #endif
