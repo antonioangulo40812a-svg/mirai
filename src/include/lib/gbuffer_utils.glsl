@@ -40,6 +40,7 @@ uvec2 packLight(vec3 lightColor) {
     vec3 scaled = lightColor / 6.0;
     float maxComponent = ceil(clamp(max(max(scaled.r, scaled.g), scaled.b), 0.0, 1.0)
         * 255.0) / 255.0;
+    maxComponent = max(maxComponent, 1.0 / 255.0);
     uvec4 q = uvec4(clamp(vec4(scaled / vec3(maxComponent), maxComponent), 0.0, 1.0) * 255.0);
     uvec2 lo = q.xy & 0xFFu;
     uvec2 hi = q.zw & 0xFFu;
