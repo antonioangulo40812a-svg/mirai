@@ -153,8 +153,6 @@ void texturePBRMaterials(
             mers.a = mersTex.a;
     }
 
-    vec3 tNormal = vec3(0.0, 0.0, 1.0);
-
     vec2 normalUVScale = vec2(pbrTextureData.colourToNormalUvScale0,
         pbrTextureData.colourToNormalUvScale1);
     vec2 normalUVBias  = vec2(pbrTextureData.colourToNormalUvBias0,
@@ -166,12 +164,20 @@ void texturePBRMaterials(
         pbrTextureData.maxMipNormal
     ), 0.0, 1.0);
 
-    if ((pbrTextureData.flags & kPBRHasNormalTexture) == kPBRHasNormalTexture) {
+    bool hasNormalTex = (pbrTextureData.flags & kPBRHasNormalTexture) == kPBRHasNormalTexture;
+    bool hasHeightmapTex =
+        (pbrTextureData.flags & kPBRHasHeightMapTexture) == kPBRHasHeightMapTexture;
+    bool hasEncNormalTex =
+        (pbrTextureData.flags & kPBRHasEncNormalTexture) == kPBRHasEncNormalTexture;
+
+    vec3 tNormal = vec3(0.0, 0.0, 1.0);
+
+    if (hasNormalTex) {
         tNormal = texture(matTexture, normalUV).rgb * 2.0 - 1.0;
-    } else if ((pbrTextureData.flags & kPBRHasHeightMapTexture) == kPBRHasHeightMapTexture) {
+    } else if (hasHeightmapTex) {
         tNormal = calcNormalFromHeightmap(matTexture, normalUV);
         tNormal.xy *= mipFade;
-    } else if ((pbrTextureData.flags & kPBRHasEncNormalTexture) == kPBRHasEncNormalTexture) {
+    } else if (hasEncNormalTex) {
         vec4 normalTex = textureLod(matTexture, normalUV, 0.0);
         if (normalTex.r == normalTex.g && normalTex.g == normalTex.b)
             tNormal = calcNormalFromHeightmap(matTexture, normalUV);
@@ -180,8 +186,10 @@ void texturePBRMaterials(
         tNormal.xy *= mipFade;
     }
 
-    mat3 tbn = mat3(normalize(tangent), normalize(bitangent), normal);
-    normal = tbn * tNormal;
+    if (hasNormalTex || hasHeightmapTex || hasEncNormalTex) {
+        mat3 tbn = mat3(normalize(tangent), normalize(bitangent), normal);
+        normal = tbn * tNormal;
+    }
 }
 
 #endif
@@ -226,11 +234,11 @@ void texturePBRMaterials(
             mers.a = mersTex.a;
     }
 
-    vec3 tNormal = vec3(0.0, 0.0, 1.0);
-
     bool hasNormalTex = (pbrTextureFlags & kPBRHasNormalTexture) == kPBRHasNormalTexture;
     bool hasHeightmapTex = (pbrTextureFlags & kPBRHasHeightMapTexture) == kPBRHasHeightMapTexture;
     bool hasEncNormalTex = (pbrTextureFlags & kPBRHasEncNormalTexture) == kPBRHasEncNormalTexture;
+
+    vec3 tNormal = vec3(0.0, 0.0, 1.0);
 
     if (hasNormalTex) {
         tNormal = texture(s_NormalTexture, uv).rgb * 2.0 - 1.0;
@@ -262,21 +270,19 @@ void texturePBRMaterials(
     inout vec3 normal,
     inout vec4 mers
 ) {
-    int pbrTextureId = int(BannerBasePBRTextureData[2].r);
+    int pbrTextureFlags = int(BannerBasePBRTextureData[2].r);
 
     mers = vec4(BannerBasePBRTextureData[2].abg, BannerBasePBRTextureData[3].r);
 
     vec2 materialUVScale = vec2(BannerBasePBRTextureData[0].x, BannerBasePBRTextureData[0].y);
     vec2 materialUVBias = vec2(BannerBasePBRTextureData[0].z, BannerBasePBRTextureData[0].w);
 
-    if ((pbrTextureId & kPBRHasMaterialTexture) == kPBRHasMaterialTexture) {
+    if ((pbrTextureFlags & kPBRHasMaterialTexture) == kPBRHasMaterialTexture) {
         vec4 mersTex = texture(matTexture, uv * materialUVScale + materialUVBias);
         mers.rgb = mersTex.rgb;
-        if ((pbrTextureId & kPBRHasSubsurfaceChannel) == kPBRHasSubsurfaceChannel)
+        if ((pbrTextureFlags & kPBRHasSubsurfaceChannel) == kPBRHasSubsurfaceChannel)
             mers.a = mersTex.a;
     }
-
-    vec3 tNormal = vec3(0.0, 0.0, 1.0);
 
     vec2 normalUVScale = vec2(BannerBasePBRTextureData[1].x, BannerBasePBRTextureData[1].y);
     vec2 normalUVBias = vec2(BannerBasePBRTextureData[1].z, BannerBasePBRTextureData[1].w);
@@ -287,12 +293,18 @@ void texturePBRMaterials(
         BannerBasePBRTextureData[3].w
     ), 0.0, 1.0);
 
-    if ((pbrTextureId & kPBRHasNormalTexture) == kPBRHasNormalTexture) {
+    bool hasNormalTex = (pbrTextureFlags & kPBRHasNormalTexture) == kPBRHasNormalTexture;
+    bool hasHeightmapTex = (pbrTextureFlags & kPBRHasHeightMapTexture) == kPBRHasHeightMapTexture;
+    bool hasEncNormalTex = (pbrTextureFlags & kPBRHasEncNormalTexture) == kPBRHasEncNormalTexture;
+
+    vec3 tNormal = vec3(0.0, 0.0, 1.0);
+
+    if (hasNormalTex) {
         tNormal = texture(matTexture, normalUV).rgb * 2.0 - 1.0;
-    } else if ((pbrTextureId & kPBRHasHeightMapTexture) == kPBRHasHeightMapTexture) {
+    } else if (hasHeightmapTex) {
         tNormal = calcNormalFromHeightmap(matTexture, normalUV);
         tNormal.xy *= mipFade;
-    } else if ((pbrTextureId & kPBRHasEncNormalTexture) == kPBRHasEncNormalTexture) {
+    } else if (hasEncNormalTex) {
         vec4 normalTex = textureLod(matTexture, normalUV, 0.0);
         if (normalTex.r == normalTex.g && normalTex.g == normalTex.b)
             tNormal = calcNormalFromHeightmap(matTexture, normalUV);
@@ -301,8 +313,10 @@ void texturePBRMaterials(
         tNormal.xy *= mipFade;
     }
 
-    mat3 tbn = mat3(normalize(tangent), normalize(bitangent), normal);
-    normal = tbn * tNormal;
+    if (hasNormalTex || hasEncNormalTex || hasEncNormalTex) {
+        mat3 tbn = mat3(normalize(tangent), normalize(bitangent), normal);
+        normal = tbn * tNormal;
+    }
 }
 
 #endif
