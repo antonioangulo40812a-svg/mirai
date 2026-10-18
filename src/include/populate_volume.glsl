@@ -70,7 +70,8 @@ void main() {
     vec3 waterScattering = exp(-WATER_EXTINCTION_COEFFICIENTS * 10.0)
         * phase(cost, 0.65, 0.0) * occlusion * luminance(absorbColor) * 0.01;
 
-    vec4 totalScatter = vec4(airScattering, luminance(airScattering)) * CameraLightIntensity.y;
+    vec4 totalScatter = vec4(airScattering, luminance(airScattering * 0.5))
+        * CameraLightIntensity.y;
     totalScatter = mix(totalScatter, vec4(waterScattering, 0.0), waterBody);
 
     imageStore(s_ScatteringBufferOut, ivec3(xyz), totalScatter);
