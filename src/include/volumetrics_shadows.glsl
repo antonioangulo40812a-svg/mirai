@@ -52,7 +52,6 @@ float calcFPShadow(vec3 worldPos) {
 #if TRANSPILE_TARGET__GLSL
     uvShadow.y += 1.0 - shadowScale;
 #endif
-
     float cascade = dot(CascadesPerSet, vec4(1.0)) + 1.0;
     return step(occluder, textureLod(s_ShadowCascades, vec3(uvShadow, cascade), 0.0).r);
 }
@@ -67,7 +66,10 @@ float calcCascadeShadow(int cascadeIdx, vec3 projPos) {
 #endif
 
     float shadowScale = CascadesParameters[cascadeIdx].x;
-    uvShadow = uvShadow * shadowScale + vec2(0.0, 1.0 - shadowScale);
+    uvShadow = uvShadow * shadowScale;
+#if TRANSPILE_TARGET__GLSL
+    uvShadow.y += 1.0 - shadowScale;
+#endif
     return step(occluder, textureLod(s_ShadowCascades, vec3(uvShadow, cascadeIdx), 0.0).r);
 }
 

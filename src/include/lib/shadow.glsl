@@ -37,14 +37,14 @@ float calcFPShadow(vec3 worldPos, float nDotSd) {
         + CascadesParameters[0].b * (sqrt(1.0 - (slopeMask * slopeMask)) / slopeMask);
 
     vec3 projPos = (PlayerShadowProj * vec4(worldPos, 1.0)).xyz;
-    projPos.z = min(projPos.z - zbias, 1.0);
+    projPos.z = min(projPos.z, 1.0);
 
 #if TRANSPILE_TARGET__GLSL
     vec2 uvShadow = projPos.xy * 0.5 + 0.5;
-    float occluder = projPos.z * 0.5 + 0.5;
+    float occluder = projPos.z * 0.5 + 0.5 - zbias;
 #else
     vec2 uvShadow = vec2(projPos.x, -projPos.y) * 0.5 + 0.5;
-    float occluder = projPos.z;
+    float occluder = projPos.z - zbias;
 #endif
 
     float shadowScale =
@@ -86,18 +86,21 @@ vec2 calcCascadeShadow(int cascadeIdx, vec3 worldPos, float nDotSd) {
     float slopeMask = clamp(nDotSd, NdLFloor[cascadeIdx], 1.0);
     float zbias = CascadesParameters[cascadeIdx].g
         + CascadesParameters[cascadeIdx].b * (sqrt(1.0 - (slopeMask * slopeMask)) / slopeMask);
-    projPos.z -= zbias;
 
 #if TRANSPILE_TARGET__GLSL
     vec2 uvShadow = projPos.xy * 0.5 + 0.5;
-    float occluder = projPos.z * 0.5 + 0.5;
+    float occluder = projPos.z * 0.5 + 0.5 - zbias;
 #else
     vec2 uvShadow = vec2(projPos.x, -projPos.y) * 0.5 + 0.5;
-    float occluder = projPos.z;
+    float occluder = projPos.z - zbias;
 #endif
 
     float shadowScale = CascadesParameters[cascadeIdx].r;
-    uvShadow = uvShadow * shadowScale + vec2(0.0, 1.0 - shadowScale);
+    uvShadow = uvShadow * shadowScale;
+
+#if TRANSPILE_TARGET__GLSL
+    uvShadow.y += 1.0 - shadowScale;
+#endif
 
     vec2 result = vec2(0.0);
     float offsetScale =
