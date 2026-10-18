@@ -42,11 +42,7 @@ vec3 calcDirectionalLight(
     vec3 specular = calcSpecular(normal,
         DirectionalLightSourceWorldSpaceDirection.xyz, -worldDir, f0, mers.b);
 
-    mers.a *= linearstep(
-        ShadowFilterOffsetAndRangeFarAndMapSizeAndNormalOffsetStrength.y - 8.0,
-        ShadowFilterOffsetAndRangeFarAndMapSizeAndNormalOffsetStrength.y - 16.0,
-        length(worldPos)
-    );
+    mers.a *= smoothstep(40.0, 50.0, length(worldPos));
 
     float fdiffuse = diffuseLambert(normal, DirectionalLightSourceWorldSpaceDirection.xyz);
     float wdiffuse = diffuseWrap(normal, DirectionalLightSourceWorldSpaceDirection.xyz, 0.5);
