@@ -1,0 +1,26 @@
+name: Mirai diagnostico
+on: workflow_dispatch
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [1, 2, 3, 4, 5, 6]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Aplicar parche
+        run: unzip -o overlay.zip
+      - name: Fijar modo de diagnostico
+        run: sed -i "s/^#define MIRAI_DIAG [0-9]*/#define MIRAI_DIAG ${{ matrix.mode }}/" src/include/diag_config.glsl
+      - name: Compilar materiales
+        run: python build.py android -m 'DeferredMixedResolution*'
+      - name: Empaquetar
+        run: python tools/assemble_diag.py ${{ matrix.mode }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mirai-diag-${{ matrix.mode }}
+          path: mirai-diag-${{ matrix.mode }}.mcpack
