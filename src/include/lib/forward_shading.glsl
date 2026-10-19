@@ -15,10 +15,10 @@ vec3 calcAmbientLight(
     vec3 absorbColor,
     vec2 lightmap
 ) {
-    vec3 blockAmbient = (blmColor + blmColor * blmColor * blmColor * blmColor * 10.0)
+    vec3 blockAmbient = (blmColor + pow(blmColor, vec3(5.0)) * 10.0)
         * BLOCK_AMBIENT_MULTIPLIER;
 
-    float skylmContrib = mix(pow(lightmap.g, 3.0), pow(lightmap.g, 5.0), CameraLightIntensity.g);
+    float skylmContrib = lightmap.g * (linearstep(0.9, 1.0, lightmap.g) * 0.5 + 0.5);
     vec3 skyAmbient = saturation(scatterColor, 0.5) * PI * skylmContrib
         * SKY_AMBIENT_MULTIPLIER;
 
@@ -43,8 +43,8 @@ vec3 calcDirectionalLight(
         DirectionalLightSourceWorldSpaceDirection.xyz, -worldDir, f0, mers.b);
 
     mers.a *= linearstep(
-        ShadowFilterOffsetAndRangeFarAndMapSizeAndNormalOffsetStrength.y - 8.0,
         ShadowFilterOffsetAndRangeFarAndMapSizeAndNormalOffsetStrength.y - 16.0,
+        ShadowFilterOffsetAndRangeFarAndMapSizeAndNormalOffsetStrength.y - 24.0,
         length(worldPos)
     );
 
