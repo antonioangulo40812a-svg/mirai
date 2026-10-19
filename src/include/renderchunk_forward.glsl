@@ -148,8 +148,8 @@ void main() {
 
     if (fNormal.y > 0.0) {
         float puddle = smoothstep(0.7, 1.0, v_lightmapUV.y)
-            * smoothstep(0.0, 0.5, valueNoise((v_worldPos.xz - WorldOrigin.xz) * 0.2))
-            * max(1.0 - SunColor.r, 0.0) * 0.8;
+            * smoothstep(0.45, 0.65, valueNoise((v_worldPos.xz - WorldOrigin.xz) * 0.25))
+            * max(1.0 - SunColor.r, 0.0) * 0.9;
         mers.b *= (1.0 - puddle);
         normal = mix(normal, fNormal, puddle);
     }
