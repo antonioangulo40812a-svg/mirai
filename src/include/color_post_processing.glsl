@@ -28,50 +28,40 @@ SAMPLER2D(s_RasterizedColor);
 
 #include "lib/common.glsl"
 
-// AgX tonemapping
-// https://github.com/bWFuanVzYWth/AgX
-// https://iolite-engine.com/blog_posts/minimal_agx_implementation
-
-const mat3 AGX_INSET = mat3(
-    0.842479062253094, 0.0423282422610123, 0.0423756549057051,
-    0.0784335999999992, 0.878468636469772, 0.0784336,
-    0.0792237451477643, 0.0791661274605434, 0.879142973793104
+// https://www.shadertoy.com/view/dtSGD1
+const mat3 SRGB_TO_ADJUSTED = mat3(
+    0.8817991968, 0.0588226238, 0.0593781794,
+    0.0317991968, 0.9088226238, 0.0593781794,
+    0.0317991968, 0.0588226238, 0.9093781794
 );
 
-const mat3 AGX_OUTSET = mat3(
-    1.19687900512017, -0.0528968517574562, -0.0529716355144438,
-    -0.0980208811401368, 1.15190312990417, -0.0980434501171241,
-    -0.0990297440797205, -0.0989611768448433, 1.15107367264116
-);
+vec3 openDomainToNormalizedLog2(vec3 openDomain) {
+    const float min_ev = -10.0;
+    const float max_ev = 6.5;
 
-const float AGX_MIN_EV = -12.473931188332413;
-const float AGX_MAX_EV = 4.026068811667588;
-const float AGX_DYNAMIC_RANGE = AGX_MAX_EV - AGX_MIN_EV;
-
-vec3 agxCurve3(vec3 v) {
-    const float threshold = 0.6060606060606061;
-    const float a_up = 69.86278913545539;
-    const float a_down = 59.507875;
-    const float b_up = 13.0 / 4.0;
-    const float b_down = 3.0 / 1.0;
-    const float c_up = -4.0 / 13.0;
-    const float c_down = -1.0 / 3.0;
-
-    vec3 mask = step(v, vec3(threshold));
-    vec3 a = a_up + (a_down - a_up) * mask;
-    vec3 b = b_up + (b_down - b_up) * mask;
-    vec3 c = c_up + (c_down - c_up) * mask;
-    return 0.5 + (((-2.0 * threshold)) + 2.0 * v) * pow(1.0 + a * pow(abs(v - threshold), b), c);
+    float total_exposure = max_ev - min_ev;
+    vec3 output_log = clamp(log2(openDomain / MIDDLE_GRAY), min_ev, max_ev);
+    return (output_log - min_ev) / total_exposure;
 }
 
-vec3 agx(vec3 val) {
-    val = AGX_INSET * val;
-    val = max(val, vec3(1e-6));
-    val = clamp(log2(val) * (1.0 / AGX_DYNAMIC_RANGE) - (AGX_MIN_EV / AGX_DYNAMIC_RANGE), 0.0, 1.0);
-    val = agxCurve3(val);
-    val = AGX_OUTSET * val;
-    val = max(val, vec3(0.0));
-    return val;
+// https://github.com/bWFuanVzYWth/AgX
+vec3 agxCurve3(vec3 v) {
+    const float threshold = 0.6060606060606061;
+    const float slope = 2.3;
+
+    const float a_up = 95.42903416;
+    const float a_down = 15.57566596;
+    const float b_up = 3.1;
+    const float b_down = 1.9;
+    const float c_up = -1.0 / 3.1;
+    const float c_down = -1.0 / 1.9;
+
+    vec3 mask = step(v, vec3(threshold));
+    vec3 a = mix(vec3(a_up), vec3(a_down), mask);
+    vec3 b = mix(vec3(b_up), vec3(b_down), mask);
+    vec3 c = mix(vec3(c_up), vec3(c_down), mask);
+
+    return 0.5 + slope * (v - threshold) * pow(1.0 + a * pow(abs(v - threshold), b), c);
 }
 
 in vec2 v_texcoord0;
@@ -90,7 +80,12 @@ void main() {
     vec4 overlayCol = texture(s_RasterizedColor, v_texcoord0);
     inputColor = mix(inputColor, overlayCol.rgb, overlayCol.a);
 
-    vec3 outColor = agx(inputColor);
+    vec3 outColor = inputColor * SRGB_TO_ADJUSTED;
+    outColor = max(outColor, vec3(1e-6));
+    outColor = openDomainToNormalizedLog2(outColor);
+    outColor = agxCurve3(outColor);
+    outColor = clamp(outColor, 0.0, 1.0);
+
     fragColor = vec4(outColor, 1.0);
 }
 #endif //SHADER_STAGE__FRAGMENT
