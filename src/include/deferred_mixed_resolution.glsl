@@ -132,8 +132,8 @@ void main() {
     albedo = (1.0 - metalness) * albedo;
 
     subsurface *= linearstep(
-        ShadowFilterOffsetAndRangeFarAndMapSizeAndNormalOffsetStrength.y - 8.0,
         ShadowFilterOffsetAndRangeFarAndMapSizeAndNormalOffsetStrength.y - 16.0,
+        ShadowFilterOffsetAndRangeFarAndMapSizeAndNormalOffsetStrength.y - 24.0,
         length(worldPos)
     );
 
@@ -186,11 +186,10 @@ void main() {
     albedo = (1.0 - metalness) * albedo;
 
     vec3 blmColor = blightColor.rgb * blightColor.a * 6.0;
-    vec3 blockAmbient = (blmColor + blmColor * blmColor * blmColor * blmColor * 10.0)
+    vec3 blockAmbient = (blmColor + pow(blmColor, vec3(5.0)) * 10.0)
         * BLOCK_AMBIENT_MULTIPLIER;
 
-    float skylmContrib = mix(pow(skyLightmap, 3.0), pow(skyLightmap, 5.0),
-        CameraLightIntensity.y);
+    float skylmContrib = skyLightmap * (linearstep(0.9, 1.0, skyLightmap) * 0.5 + 0.5);
     vec3 skyAmbient = saturation(v_scatterColor, 0.5)
         * PI * skylmContrib * SKY_AMBIENT_MULTIPLIER;
 
