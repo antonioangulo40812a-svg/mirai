@@ -1,0 +1,37 @@
+name: Mirai SSAO
+on: workflow_dispatch
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { id: ao-debug, n: 1, label: "AO debug (solo oclusion)", diag: 7, strength: "1.0", radius: "0.5", samples: 8 }
+          - { id: ssao-suave, n: 2, label: "SSAO suave", diag: 0, strength: "0.4", radius: "0.4", samples: 8 }
+          - { id: ssao-medio, n: 3, label: "SSAO medio", diag: 0, strength: "0.6", radius: "0.5", samples: 8 }
+          - { id: ssao-fuerte, n: 4, label: "SSAO fuerte", diag: 0, strength: "0.9", radius: "0.7", samples: 12 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Aplicar parche
+        run: unzip -o overlay.zip
+      - name: Configurar SSAO
+        run: |
+          F=src/include/diag_config.glsl
+          sed -i "s/^#define MIRAI_DIAG [0-9]*/#define MIRAI_DIAG ${{ matrix.diag }}/" $F
+          sed -i "s/^#define MIRAI_SSAO [0-9]*/#define MIRAI_SSAO 1/" $F
+          sed -i "s/^#define SSAO_STRENGTH .*/#define SSAO_STRENGTH ${{ matrix.strength }}/" $F
+          sed -i "s/^#define SSAO_RADIUS .*/#define SSAO_RADIUS ${{ matrix.radius }}/" $F
+          sed -i "s/^#define SSAO_SAMPLES .*/#define SSAO_SAMPLES ${{ matrix.samples }}/" $F
+          grep -E '^#define (MIRAI_DIAG|MIRAI_SSAO|SSAO_)' $F
+      - name: Compilar materiales
+        run: python build.py android -m 'DeferredMixedResolution*'
+      - name: Empaquetar
+        run: python tools/assemble_pack.py "${{ matrix.id }}" "${{ matrix.label }}" ${{ matrix.n }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mirai-${{ matrix.id }}
+          path: mirai-${{ matrix.id }}.mcpack
