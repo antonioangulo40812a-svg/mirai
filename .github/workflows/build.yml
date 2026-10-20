@@ -1,0 +1,39 @@
+name: Mirai build
+on: workflow_dispatch
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      variants: ${{ steps.read.outputs.variants }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: read
+        run: |
+          unzip -o overlay.zip variants.json
+          echo "variants=$(python3 -c 'import json;print(json.dumps(json.load(open("variants.json"))))')" >> "$GITHUB_OUTPUT"
+  build:
+    needs: plan
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: ${{ fromJson(needs.plan.outputs.variants) }}
+    env:
+      VARIANT: ${{ toJson(matrix.variant) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Aplicar parche
+        run: unzip -o overlay.zip
+      - name: Configurar variante
+        run: python tools/configure.py
+      - name: Compilar materiales
+        run: python build.py android -m 'DeferredMixedResolution*'
+      - name: Empaquetar
+        run: python tools/assemble_pack.py "${{ matrix.variant.id }}" "${{ matrix.variant.label }}" ${{ matrix.variant.n }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mirai-${{ matrix.variant.id }}
+          path: mirai-${{ matrix.variant.id }}.mcpack
