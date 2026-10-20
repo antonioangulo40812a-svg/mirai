@@ -1,0 +1,38 @@
+name: Mirai SSGI
+on: workflow_dispatch
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { id: gi-debug, n: 11, label: "GI debug (solo luz indirecta)", diag: 8, ssao: 0, strength: "1.0", radius: "3.0", samples: 8 }
+          - { id: ssgi-suave, n: 12, label: "SSAO + SSGI suave", diag: 0, ssao: 1, strength: "0.3", radius: "2.0", samples: 8 }
+          - { id: ssgi-medio, n: 13, label: "SSAO + SSGI medio", diag: 0, ssao: 1, strength: "0.5", radius: "3.0", samples: 8 }
+          - { id: ssgi-fuerte, n: 14, label: "SSAO + SSGI fuerte", diag: 0, ssao: 1, strength: "0.8", radius: "4.0", samples: 12 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Aplicar parche
+        run: unzip -o overlay.zip
+      - name: Configurar SSGI
+        run: |
+          F=src/include/diag_config.glsl
+          sed -i "s/^#define MIRAI_DIAG [0-9]*/#define MIRAI_DIAG ${{ matrix.diag }}/" $F
+          sed -i "s/^#define MIRAI_SSAO [0-9]*/#define MIRAI_SSAO ${{ matrix.ssao }}/" $F
+          sed -i "s/^#define MIRAI_SSGI [0-9]*/#define MIRAI_SSGI 1/" $F
+          sed -i "s/^#define SSGI_STRENGTH .*/#define SSGI_STRENGTH ${{ matrix.strength }}/" $F
+          sed -i "s/^#define SSGI_RADIUS .*/#define SSGI_RADIUS ${{ matrix.radius }}/" $F
+          sed -i "s/^#define SSGI_SAMPLES .*/#define SSGI_SAMPLES ${{ matrix.samples }}/" $F
+          grep -E '^#define (MIRAI_DIAG|MIRAI_SSAO|MIRAI_SSGI|SSAO_|SSGI_)' $F
+      - name: Compilar materiales
+        run: python build.py android -m 'DeferredMixedResolution*'
+      - name: Empaquetar
+        run: python tools/assemble_pack.py "${{ matrix.id }}" "${{ matrix.label }}" ${{ matrix.n }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mirai-${{ matrix.id }}
+          path: mirai-${{ matrix.id }}.mcpack
