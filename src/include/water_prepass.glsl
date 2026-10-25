@@ -126,7 +126,7 @@ void main() {
     for(int i = 0; i < 4; i++)
         waterPos += warpDir * waves2(waterPos, Time.x) * 0.1;
 
-    float d = clamp(exp(-length(v_worldPos) * 0.01), 0.0, 1.0) * 0.025;
+    float d = clamp(exp(-length(v_worldPos) * 0.01), 0.0, 1.0) * 0.05;
     vec3 waterNormal = calcWaterNormal(waterPos, Time.x, d);
     waterNormal = tbn * waterNormal;
 

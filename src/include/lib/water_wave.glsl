@@ -56,11 +56,10 @@ float waves2(vec2 pos, float time) {
 }
 
 vec3 calcWaterNormal(vec2 pos, float time, float d) {
-    float hL = waves1(pos - vec2(d, 0.0), time);
-    float hR = waves1(pos + vec2(d, 0.0), time);
-    float hD = waves1(pos - vec2(0.0, d), time);
-    float hU = waves1(pos + vec2(0.0, d), time);
-    return normalize(vec3(hL - hR, hD - hU, 1.0));
+    float h = waves1(pos, time);
+    float hx = waves1(pos + vec2(d, 0.0), time);
+    float hy = waves1(pos + vec2(0.0, d), time);
+    return normalize(vec3(h - hx, h - hy, 1.0));
 }
 
 // projected height map, sampled along the refracted light direction

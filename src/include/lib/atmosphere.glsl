@@ -63,11 +63,11 @@ vec3 calcLightTransmittance(
         * M_LIGHT_TRANSMITTANCE);
 }
 
-AtmosphericScattering calcAtmosphereScattering(AtmosphereParams params, vec2 t1, vec2 t2) {
+AtmosphericScattering calcAtmosphereScattering(AtmosphereParams params, vec2 t2) {
     AtmosphericScattering atm;
 
     t2.y -= max(0.0, t2.x);
-    atm.opticalDepth = t1.x > 0.0 ? min(t1.x, t2.y) * 50.0 : t2.y;
+    atm.opticalDepth = t2.y;
     atm.opticalDepth = min(params.rayLength, atm.opticalDepth);
     atm.opticalDepth = min(atm.opticalDepth
         * params.aerial * M_AERIAL * AERIAL_SCALE, t2.y);
@@ -126,7 +126,7 @@ vec3 calcAtmosphere(AtmosphereParams params, out vec4 transmittance) {
         return vec3(0.0);
     }
 
-    AtmosphericScattering atm = calcAtmosphereScattering(params, t1, t2);
+    AtmosphericScattering atm = calcAtmosphereScattering(params, t2);
     atm.densityR = pow(atm.densityR, 2.5);
     transmittance.rgb = exp(-atm.opticalDepth * (params.cRayleigh
         * atm.densityR
@@ -136,16 +136,16 @@ vec3 calcAtmosphere(AtmosphereParams params, out vec4 transmittance) {
         * atm.densityR));
     transmittance.a = step(t1.x, 0.0);
 
+    if (t1.y > 0.0 && t1.y < params.rayLength) {
+        float planetOd = t1.y - max(0.0, t1.x);
+        atm.scattering *= mix(vec3(0.3, 0.4, 0.5), vec3(1.0),
+            max(clamp(exp(-planetOd * 1e-6), 0.0, 1.0), 1.0 - params.rain));
+    }
+
     return atm.scattering * M_EXPOSURE;
 }
 
 vec3 calcAtmosphere(AtmosphereParams params) {
-    vec2 t1 = sphereIntersect(
-        vec3(0.0, CAM_ALTITUDE, 0.0),
-        params.rayDir,
-        PLANET_CENTER,
-        PLANET_RADIUS
-    );
     vec2 t2 = sphereIntersect(
         vec3(0.0, CAM_ALTITUDE, 0.0),
         params.rayDir,
@@ -154,7 +154,7 @@ vec3 calcAtmosphere(AtmosphereParams params) {
     );
     if (t2.y < 0.0) return vec3(0.0);
 
-    AtmosphericScattering atm = calcAtmosphereScattering(params, t1, t2);
+    AtmosphericScattering atm = calcAtmosphereScattering(params, t2);
     return atm.scattering * M_EXPOSURE;
 }
 
@@ -185,8 +185,9 @@ vec3 calcAtmSky(vec3 worldDir, vec3 sunDir, vec3 moonDir, float rain) {
     moonAtmParams.lightDir = moonDir;
     moonAtmParams.occlusion = 0.0;
 
-    vec3 scattering = calcAtmosphere(sunAtmParams) * SUN_RADIANCE_MULTIPLIER;
-    scattering += luminance(calcAtmosphere(moonAtmParams)) * MOON_RADIANCE_MULTIPLIER;
+    vec4 _unused;
+    vec3 scattering = calcAtmosphere(sunAtmParams, _unused) * SUN_RADIANCE_MULTIPLIER;
+    scattering += luminance(calcAtmosphere(moonAtmParams, _unused)) * MOON_RADIANCE_MULTIPLIER;
     return scattering;
 }
 
